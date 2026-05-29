@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>View Records – MOT Nexus</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+
+<header class="mot-header">
+  <button id="sidebarToggle" class="btn d-md-none me-2" style="color:white"><i class="bi bi-list fs-5"></i></button>
+  <a href="/" class="mot-logo me-auto"><span>MOT</span> Nexus</a>
+  <div class="d-flex align-items-center gap-3">
+    <div class="position-relative">
+      <a href="/dashboard.html" class="nav-btn"><i class="bi bi-bell"></i></a>
+      <span id="alertBadge" class="alert-badge" style="display:none">0</span>
+    </div>
+    <a href="/" class="nav-btn"><i class="bi bi-house me-1"></i>Home</a>
+  </div>
+</header>
+
+<nav class="mot-sidebar">
+  <div class="nav-section">Data Management</div>
+  <a href="/upload.html" class="nav-link" data-page="upload"><i class="bi bi-cloud-upload"></i>Upload Data</a>
+  <a href="/view.html" class="nav-link active" data-page="view"><i class="bi bi-table"></i>View Records</a>
+  <a href="/download.html" class="nav-link" data-page="download"><i class="bi bi-download"></i>Download Data</a>
+  <a href="/delete.html"  class="nav-link" data-page="delete">  <i class="bi bi-trash"></i>Delete Data</a>
+  <div class="nav-section mt-2">Analytics</div>
+  <a href="/dashboard.html" class="nav-link" data-page="dashboard"><i class="bi bi-speedometer2"></i>Executive Dashboard</a>
+  <div class="nav-section mt-2">System</div>
+  <a href="/api/docs" target="_blank" class="nav-link"><i class="bi bi-code-square"></i>API Documentation</a>
+</nav>
+
+<main class="mot-main">
+  <div class="mot-breadcrumb">
+    <a href="/">Home</a><span class="sep">/</span><span class="current">View Records</span>
+  </div>
+  <div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+      <h1><i class="bi bi-table me-2" style="color:var(--mot-accent)"></i>View Records</h1>
+      <p>Search, filter and edit requirement records</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="/upload.html" class="btn btn-sm btn-outline-primary"><i class="bi bi-upload me-1"></i>Upload</a>
+      <a href="/download.html" class="btn btn-sm btn-outline-success"><i class="bi bi-download me-1"></i>Export</a>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold mb-1">Fulfillment Status</label>
+        <select class="form-select form-select-sm" id="filterStatus">
+          <option value="">All Statuses</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold mb-1">Requirement ID</label>
+        <input type="text" class="form-control form-control-sm" id="filterReqId" placeholder="Search ID…">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold mb-1">Group Customer Name</label>
+        <input type="text" class="form-control form-control-sm" id="filterCustomer" placeholder="Search customer…">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold mb-1">Account Name</label>
+        <input type="text" class="form-control form-control-sm" id="filterAccount" placeholder="Search account…">
+      </div>
+      <div class="col-12 d-flex gap-2">
+        <button class="btn btn-sm btn-mot" onclick="loadRecords(1)"><i class="bi bi-search me-1"></i>Search</button>
+        <button class="btn btn-sm btn-outline-secondary" onclick="clearFilters()"><i class="bi bi-x-circle me-1"></i>Clear</button>
+        <span class="ms-auto text-muted small align-self-center" id="resultCount"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="mot-card">
+    <div class="mot-card-body p-0">
+      <div class="table-responsive">
+        <table class="table mot-table mb-0" id="reqTable">
+          <thead>
+            <tr>
+              <th>Req ID</th>
+              <th>Fulfillment Status</th>
+              <th>Group Customer</th>
+              <th>Account</th>
+              <th>Delivery Manager</th>
+              <th>Skill Consolidated</th>
+              <th>Ageing (Days)</th>
+              <th>Revenue Impact</th>
+              <th>Observation</th>
+              <th style="width:80px">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="reqBody">
+            <tr><td colspan="10" class="text-center py-4 text-muted">
+              <i class="bi bi-search me-2"></i>Use the filters above to search records, or click Search to view all.
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- Pagination -->
+      <div class="d-flex justify-content-between align-items-center px-3 py-2 border-top">
+        <div class="text-muted small" id="paginationInfo"></div>
+        <nav><ul class="pagination pagination-sm mb-0" id="pagination"></ul></nav>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="mot-footer">
+  <span>&copy; 2025 MOT Nexus</span>
+  <span id="footerTime"></span>
+</footer>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header" style="background:var(--mot-navy);color:white">
+        <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Edit Requirement — <span id="editReqId"></span></h5>
+        <button type="button" class="btn-close btn-close-white" onclick="cancelEdit()"></button>
+      </div>
+      <div class="modal-body" id="editBody">
+        <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="cancelEdit()"><i class="bi bi-x me-1"></i>Cancel</button>
+        <button class="btn btn-success" onclick="saveEdit()"><i class="bi bi-check-lg me-1"></i>Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/common.js"></script>
+<script>
+document.getElementById('footerTime').textContent = new Date().toLocaleString();
+const SESSION_ID = getSessionId();
+let currentPage = 1, totalPages = 0, editingId = null;
+let editModal = null;
+
+window.addEventListener('DOMContentLoaded', async () => {
+  editModal = new bootstrap.Modal(document.getElementById('editModal'));
+  await loadFilterOptions();
+  // Pre-fill from URL params
+  const p = new URLSearchParams(location.search);
+  if (p.get('status')) document.getElementById('filterStatus').value = p.get('status');
+  loadRecords(1);
+});
+
+async function loadFilterOptions() {
+  try {
+    const opts = await apiFetch('/dashboard/filter-options');
+    const sel = document.getElementById('filterStatus');
+    opts.fulfillment_statuses.forEach(s => {
+      const o = document.createElement('option'); o.value = s; o.textContent = s; sel.appendChild(o);
+    });
+  } catch {}
+}
+
+async function loadRecords(page) {
+  currentPage = page;
+  const params = new URLSearchParams({
+    page, page_size: 50,
+    ...(document.getElementById('filterStatus').value && { fulfillment_status: document.getElementById('filterStatus').value }),
+    ...(document.getElementById('filterReqId').value && { requirement_id: document.getElementById('filterReqId').value }),
+    ...(document.getElementById('filterCustomer').value && { group_customer_name: document.getElementById('filterCustomer').value }),
+    ...(document.getElementById('filterAccount').value && { account_name: document.getElementById('filterAccount').value }),
+  });
+
+  const tbody = document.getElementById('reqBody');
+  tbody.innerHTML = '<tr><td colspan="10" class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div></td></tr>';
+
+  try {
+    const data = await apiFetch('/requirements?' + params);
+    totalPages = data.total_pages;
+    document.getElementById('resultCount').textContent = `${data.total.toLocaleString()} records found`;
+    renderTable(data.items);
+    renderPagination(data.total, data.page, data.page_size, data.total_pages);
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-3"><i class="bi bi-exclamation-circle me-2"></i>${e.message}</td></tr>`;
+  }
+}
+
+function renderTable(items) {
+  const tbody = document.getElementById('reqBody');
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">No records found matching the search criteria.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(r => `
+    <tr class="${r.is_locked ? 'locked-row' : ''}">
+      <td><code class="small">${r.requirement_id}</code></td>
+      <td>${statusBadge(r.fulfillment_status)}</td>
+      <td class="small">${r.group_customer_name || '—'}</td>
+      <td class="small">${r.account_name || '—'}</td>
+      <td class="small">${r.delivery_manager || '—'}</td>
+      <td class="small">${r.skill_consolidated || '—'}</td>
+      <td class="text-center"><span class="badge ${ageClass(r.requirement_ageing_calendar_days)}">${r.requirement_ageing_calendar_days || '—'}</span></td>
+      <td class="small">${r.revenue_impact ? fmtCurrency(r.revenue_impact) : '—'}</td>
+      <td><span class="${r.observation === 'Valid RGS' ? 'badge-valid' : r.observation === 'Invalid RGS' ? 'badge-invalid' : ''}">${r.observation || '—'}</span></td>
+      <td>
+        ${r.is_locked
+          ? '<span class="badge bg-warning text-dark small"><i class="bi bi-lock me-1"></i>Locked</span>'
+          : `<button class="btn btn-sm btn-outline-primary" onclick="openEdit('${r.requirement_id}')"><i class="bi bi-pencil"></i></button>`
+        }
+      </td>
+    </tr>`).join('');
+}
+
+function ageClass(age) {
+  const n = parseInt(age);
+  if (isNaN(n)) return 'bg-secondary';
+  if (n > 90) return 'bg-danger';
+  if (n > 60) return 'bg-warning text-dark';
+  if (n > 30) return 'bg-info text-dark';
+  return 'bg-success';
+}
+
+function renderPagination(total, page, pageSize, totalPages) {
+  const info = document.getElementById('paginationInfo');
+  const start = (page - 1) * pageSize + 1;
+  const end = Math.min(page * pageSize, total);
+  info.textContent = `Showing ${start}–${end} of ${total.toLocaleString()}`;
+
+  const nav = document.getElementById('pagination');
+  if (totalPages <= 1) { nav.innerHTML = ''; return; }
+
+  let html = `<li class="page-item ${page <= 1 ? 'disabled' : ''}">
+    <a class="page-link" href="#" onclick="loadRecords(${page-1})">‹</a></li>`;
+
+  const range = pageRange(page, totalPages);
+  range.forEach(p => {
+    if (p === '…') html += `<li class="page-item disabled"><span class="page-link">…</span></li>`;
+    else html += `<li class="page-item ${p === page ? 'active' : ''}">
+      <a class="page-link" href="#" onclick="loadRecords(${p})">${p}</a></li>`;
+  });
+
+  html += `<li class="page-item ${page >= totalPages ? 'disabled' : ''}">
+    <a class="page-link" href="#" onclick="loadRecords(${page+1})">›</a></li>`;
+  nav.innerHTML = html;
+}
+
+function pageRange(current, total) {
+  if (total <= 7) return Array.from({length: total}, (_, i) => i + 1);
+  if (current <= 4) return [1,2,3,4,5,'…',total];
+  if (current >= total - 3) return [1,'…',total-4,total-3,total-2,total-1,total];
+  return [1,'…',current-1,current,current+1,'…',total];
+}
+
+function clearFilters() {
+  document.getElementById('filterStatus').value = '';
+  document.getElementById('filterReqId').value = '';
+  document.getElementById('filterCustomer').value = '';
+  document.getElementById('filterAccount').value = '';
+  loadRecords(1);
+}
+
+// ── Edit ────────────────────────────────────────────────────────────────────
+
+async function openEdit(reqId) {
+  editingId = reqId;
+  document.getElementById('editReqId').textContent = reqId;
+  editModal.show();
+  document.getElementById('editBody').innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>';
+
+  try {
+    // Acquire lock
+    const lockRes = await apiFetch(`/requirements/${reqId}/lock`, {
+      method: 'POST', body: { session_id: SESSION_ID }
+    });
+    if (!lockRes.success) {
+      document.getElementById('editBody').innerHTML =
+        `<div class="alert alert-warning m-3"><i class="bi bi-lock me-2"></i>${lockRes.message}</div>`;
+      document.querySelector('#editModal .modal-footer').style.display = 'none';
+      return;
+    }
+    document.querySelector('#editModal .modal-footer').style.display = '';
+
+    const rec = await apiFetch(`/requirements/${reqId}?session_id=${SESSION_ID}`);
+    renderEditForm(rec);
+  } catch(e) {
+    document.getElementById('editBody').innerHTML = `<div class="alert alert-danger m-3">${e.message}</div>`;
+  }
+}
+
+const DERIVED = new Set(['requirement_ageing_calendar_days','observation','won_sp','skill_consolidated',
+  'skill_consolidated_second_skill','fulfillment_perspective','requirement_ageing_months',
+  'pending_with','gbams_rmg_name','evaluator_emp_name','requirement_month','it_bps']);
+
+const FIELD_LABELS = {
+  fulfillment_status: 'Fulfillment Status', group_customer_name: 'Group Customer Name',
+  account_name: 'Account Name', domain: 'Domain', iou: 'IOU', sub_iou: 'Sub IOU',
+  country: 'Country', branch: 'Branch', primary_competency_proficiency_details: 'Primary Competency',
+  competency: 'Competency', experience_range: 'Experience Range', revenue_impact: 'Revenue Impact',
+  onsite_offshore: 'Onsite/Offshore', delivery_manager: 'Delivery Manager',
+  skill_manually_entered: 'Skill (Manual)', added_date: 'Added Date', service_practice: 'Service Practice',
+  target_fulfillment_date: 'Target Fulfillment Date', revenue_at_risk: 'Revenue At Risk',
+  revenue_won: 'Revenue Won', requirement_start_date: 'Requirement Start Date',
+  candidate_name: 'Candidate Name', fulfillment_channel: 'Fulfillment Channel',
+  evaluation_status: 'Evaluation Status', candidate_evaluation_stage: 'Candidate Eval Stage',
+  sub_practice: 'Sub Practice', gbams_requirement_id: 'GBAMS Req ID', sla_breach_days: 'SLA Breach Days',
+};
+
+const DERIVED_LABELS = {
+  observation: 'Observation', won_sp: 'WON SP', skill_consolidated: 'Skill Consolidated',
+  skill_consolidated_second_skill: 'Skill Consolidated 2nd', fulfillment_perspective: 'Fulfillment Perspective',
+  requirement_ageing_months: 'Ageing (Months)', pending_with: 'Pending With',
+  gbams_rmg_name: 'GBAMS RMG Name', evaluator_emp_name: 'Evaluator Emp Name',
+  requirement_month: 'Requirement Month', it_bps: 'IT/BPS',
+  requirement_ageing_calendar_days: 'Ageing (Calendar Days)',
+};
+
+function renderEditForm(rec) {
+  let editHtml = '<div class="row g-3 p-3">';
+  // Editable fields
+  editHtml += '<div class="col-12"><h6 class="fw-bold border-bottom pb-2" style="color:var(--mot-navy)">Editable Fields</h6></div>';
+  for (const [field, label] of Object.entries(FIELD_LABELS)) {
+    const val = rec[field] ?? '';
+    const isDate = field.includes('date') || field.includes('_date');
+    const isNum = field.includes('revenue') || field === 'sla_breach_days';
+    editHtml += `<div class="col-md-4 col-lg-3">
+      <label class="form-label small fw-semibold mb-1">${label}</label>
+      <input type="${isDate ? 'date' : isNum ? 'number' : 'text'}"
+        class="form-control form-control-sm"
+        id="fld_${field}"
+        value="${val}"
+        step="${isNum && field.includes('revenue') ? '0.01' : '1'}">
+    </div>`;
+  }
+
+  // Derived (read-only)
+  editHtml += '<div class="col-12 mt-2"><h6 class="fw-bold border-bottom pb-2 text-muted">Auto-Generated Fields (Read-only)</h6></div>';
+  for (const [field, label] of Object.entries(DERIVED_LABELS)) {
+    const val = rec[field] ?? '—';
+    const badge = val === 'Invalid RGS' ? 'badge-invalid' : val === 'Valid RGS' ? 'badge-valid' : '';
+    editHtml += `<div class="col-md-4 col-lg-3">
+      <label class="form-label small fw-semibold mb-1 text-muted">${label}</label>
+      <div class="form-control form-control-sm bg-light text-muted ${badge}" style="cursor:default">${val}</div>
+    </div>`;
+  }
+  editHtml += '</div>';
+  document.getElementById('editBody').innerHTML = editHtml;
+}
+
+async function saveEdit() {
+  if (!editingId) return;
+  const payload = { session_id: SESSION_ID };
+  for (const field of Object.keys(FIELD_LABELS)) {
+    const el = document.getElementById(`fld_${field}`);
+    if (el) {
+      const v = el.value.trim();
+      if (v !== '') {
+        payload[field] = field.includes('revenue') || field === 'sla_breach_days' ? parseFloat(v) || null : v;
+      } else {
+        payload[field] = null;
+      }
+    }
+  }
+  try {
+    await apiFetch(`/requirements/${editingId}`, { method: 'PUT', body: payload });
+    showToast('Record updated successfully.', 'success');
+    editModal.hide();
+    await releaseLock(editingId);
+    loadRecords(currentPage);
+  } catch(e) {
+    showToast(e.message, 'danger');
+  }
+}
+
+async function cancelEdit() {
+  if (editingId) await releaseLock(editingId);
+  editingId = null;
+  editModal.hide();
+}
+
+async function releaseLock(reqId) {
+  try {
+    await apiFetch(`/requirements/${reqId}/lock?session_id=${SESSION_ID}`, { method: 'DELETE' });
+  } catch {}
+}
+
+// Release lock when navigating away
+window.addEventListener('beforeunload', () => { if (editingId) releaseLock(editingId); });
+
+// Enter key on filters triggers search
+['filterStatus','filterReqId','filterCustomer','filterAccount'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') loadRecords(1); });
+});
+</script>
+</body>
+</html>

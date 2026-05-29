@@ -1,0 +1,40 @@
+# Linux systemd unit file for MOT Nexus
+# ─────────────────────────────────────────────────────────────────────────────
+# SETUP STEPS (run as root / sudo):
+#
+#   1. Copy the project to /opt/mot-nexus
+#   2. sudo cp mot-nexus.service /etc/systemd/system/
+#   3. sudo systemctl daemon-reload
+#   4. sudo systemctl enable mot-nexus    # auto-start on boot
+#   5. sudo systemctl start mot-nexus     # start now
+#   6. sudo systemctl status mot-nexus    # verify it's running
+#
+# USEFUL COMMANDS:
+#   sudo systemctl stop mot-nexus
+#   sudo systemctl restart mot-nexus
+#   journalctl -u mot-nexus -f           # live logs
+# ─────────────────────────────────────────────────────────────────────────────
+
+[Unit]
+Description=MOT Nexus – Enterprise Resourcing Management Portal
+After=network.target
+
+[Service]
+Type=exec
+User=motnexus                         # dedicated service user (create with: useradd -r motnexus)
+Group=motnexus
+WorkingDirectory=/opt/mot-nexus
+Environment="PYTHONPATH=/opt/mot-nexus"
+Environment="DATABASE_URL=sqlite:////opt/mot-nexus/mot_nexus.db"
+ExecStart=/opt/mot-nexus/.venv/bin/uvicorn backend.app.main:app \
+          --host 0.0.0.0 \
+          --port 8000 \
+          --workers 4 \
+          --log-level info
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

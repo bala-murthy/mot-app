@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Upload Data – MOT Nexus</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+
+<header class="mot-header">
+  <button id="sidebarToggle" class="btn d-md-none me-2" style="color:white"><i class="bi bi-list fs-5"></i></button>
+  <a href="/" class="mot-logo me-auto"><span>MOT</span> Nexus</a>
+  <div class="d-flex align-items-center gap-3">
+    <div class="position-relative">
+      <a href="/dashboard.html" class="nav-btn"><i class="bi bi-bell"></i></a>
+      <span id="alertBadge" class="alert-badge" style="display:none">0</span>
+    </div>
+    <a href="/" class="nav-btn"><i class="bi bi-house me-1"></i>Home</a>
+  </div>
+</header>
+
+<nav class="mot-sidebar">
+  <div class="nav-section">Data Management</div>
+  <a href="/upload.html" class="nav-link active" data-page="upload"><i class="bi bi-cloud-upload"></i>Upload Data</a>
+  <a href="/view.html" class="nav-link" data-page="view"><i class="bi bi-table"></i>View Records</a>
+  <a href="/download.html" class="nav-link" data-page="download"><i class="bi bi-download"></i>Download Data</a>
+  <a href="/delete.html"  class="nav-link" data-page="delete">  <i class="bi bi-trash"></i>Delete Data</a>
+  <div class="nav-section mt-2">Analytics</div>
+  <a href="/dashboard.html" class="nav-link" data-page="dashboard"><i class="bi bi-speedometer2"></i>Executive Dashboard</a>
+  <div class="nav-section mt-2">System</div>
+  <a href="/api/docs" target="_blank" class="nav-link"><i class="bi bi-code-square"></i>API Documentation</a>
+</nav>
+
+<main class="mot-main">
+  <div class="mot-breadcrumb">
+    <a href="/">Home</a><span class="sep">/</span><span class="current">Upload Data</span>
+  </div>
+
+  <div class="page-header">
+    <h1><i class="bi bi-cloud-upload me-2" style="color:var(--mot-accent)"></i>Upload Data</h1>
+    <p>Import requirement records from Excel (.xlsx / .xls) or CSV files</p>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-7">
+      <!-- Upload zone -->
+      <div class="mot-card mb-3">
+        <div class="mot-card-header"><h5><i class="bi bi-file-earmark-arrow-up me-2"></i>Select File</h5></div>
+        <div class="mot-card-body">
+          <div class="upload-zone" id="dropZone">
+            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="d-none">
+            <i class="bi bi-cloud-upload d-block mb-3"></i>
+            <p class="mb-1 fw-semibold">Drag &amp; drop your file here</p>
+            <p class="text-muted small mb-3">or click to browse — XLSX, XLS, CSV supported</p>
+            <button class="btn btn-mot px-4" onclick="document.getElementById('fileInput').click()">
+              <i class="bi bi-folder2-open me-2"></i>Browse Files
+            </button>
+          </div>
+          <div id="selectedFile" class="mt-3 d-none">
+            <div class="d-flex align-items-center gap-2 p-3 bg-light rounded">
+              <i class="bi bi-file-earmark-spreadsheet fs-4 text-success"></i>
+              <div class="flex-grow-1">
+                <div id="fileName" class="fw-semibold small"></div>
+                <div id="fileSize" class="text-muted" style="font-size:.75rem"></div>
+              </div>
+              <button class="btn btn-sm btn-outline-danger" onclick="clearFile()"><i class="bi bi-x"></i></button>
+            </div>
+          </div>
+          <div class="mt-3 d-flex gap-2">
+            <button class="btn btn-mot px-4" id="uploadBtn" onclick="uploadFile()" disabled>
+              <i class="bi bi-upload me-2"></i>Upload &amp; Process
+            </button>
+            <button class="btn btn-outline-secondary" onclick="downloadTemplate()">
+              <i class="bi bi-download me-2"></i>Download Template
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div class="mot-card mb-3 d-none" id="progressCard">
+        <div class="mot-card-body">
+          <div class="d-flex align-items-center gap-3 mb-2">
+            <div class="spinner-border spinner-border-sm text-primary" id="uploadSpinner"></div>
+            <span id="progressLabel">Processing file…</span>
+          </div>
+          <div class="progress" style="height:8px">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" id="progressBar" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div class="mot-card d-none" id="resultsCard">
+        <div class="mot-card-header">
+          <h5 id="resultsTitle"><i class="bi bi-check-circle me-2 text-success"></i>Upload Complete</h5>
+        </div>
+        <div class="mot-card-body">
+          <div class="row g-2 mb-3" id="statsRow"></div>
+          <div id="transformSummary" class="mb-3 d-none"></div>
+          <div id="errorSection" class="d-none">
+            <h6 class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Errors (<span id="errorCount">0</span>)</h6>
+            <div id="errorList" class="bg-light rounded p-2" style="max-height:150px;overflow-y:auto;font-size:.8rem;font-family:monospace"></div>
+          </div>
+          <div class="mt-3 d-flex gap-2">
+            <a href="/view.html" class="btn btn-success"><i class="bi bi-table me-2"></i>View Records</a>
+            <button class="btn btn-outline-secondary" onclick="resetUpload()"><i class="bi bi-arrow-repeat me-2"></i>Upload Another</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <!-- Instructions -->
+      <div class="mot-card mb-3">
+        <div class="mot-card-header"><h5><i class="bi bi-info-circle me-2"></i>File Requirements</h5></div>
+        <div class="mot-card-body">
+          <p class="small text-muted mb-2">Your Excel file should contain:</p>
+          <ul class="small mb-3">
+            <li><strong>Main sheet</strong> — requirements data (Column R = Requirement ID as primary key)</li>
+            <li><strong>RGS sheet</strong> (optional) — reference data for derivation rules</li>
+            <li><strong>Skill Consolidated Lookup</strong> (optional) — skill mapping table</li>
+            <li><strong>Parameters</strong> (optional) — fulfillment perspective mapping</li>
+          </ul>
+          <div class="alert alert-info py-2 small mb-2">
+            <i class="bi bi-lightbulb me-1"></i>
+            Records with missing Requirement ID are automatically skipped.
+          </div>
+          <div class="alert alert-warning py-2 small mb-0">
+            <i class="bi bi-arrow-repeat me-1"></i>
+            Uploading an existing Requirement ID will <strong>update</strong> that record.
+          </div>
+        </div>
+      </div>
+
+      <!-- Transformation rules -->
+      <div class="mot-card">
+        <div class="mot-card-header"><h5><i class="bi bi-gear me-2"></i>Auto-Applied Transformation Rules</h5></div>
+        <div class="mot-card-body p-0">
+          <table class="table table-sm mb-0" style="font-size:.8rem">
+            <thead><tr><th style="width:40px">#</th><th>Field</th><th>Logic</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>Observation</td><td>Valid/Invalid RGS check</td></tr>
+              <tr><td>2</td><td>WON SP</td><td>From RGS lookup</td></tr>
+              <tr><td>3</td><td>Skill Consolidated</td><td>Skill lookup mapping</td></tr>
+              <tr><td>4</td><td>Skill Consolidated 2nd</td><td>Skill lookup 2nd skill</td></tr>
+              <tr><td>5</td><td>Fulfillment Perspective</td><td>Parameters mapping</td></tr>
+              <tr><td>6</td><td>Ageing (Months)</td><td>Days from start ÷ 30</td></tr>
+              <tr><td>7</td><td>Pending With</td><td>From RGS lookup</td></tr>
+              <tr><td>8</td><td>GBAMS RMG Name</td><td>From RGS lookup</td></tr>
+              <tr><td>9</td><td>Evaluator Emp Name</td><td>From RGS lookup</td></tr>
+              <tr><td>10</td><td>Requirement Month</td><td>MMM 'YY format</td></tr>
+              <tr><td>11</td><td>IT/BPS</td><td>Service Practice = BPS?</td></tr>
+              <tr><td>12</td><td>Ageing (Calendar Days)</td><td>Days since start date</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="mot-footer">
+  <span>&copy; 2025 MOT Nexus</span>
+  <span id="footerTime"></span>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/common.js"></script>
+<script>
+document.getElementById('footerTime').textContent = new Date().toLocaleString();
+let selectedFile = null;
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+
+function setFile(f) {
+  selectedFile = f;
+  document.getElementById('fileName').textContent = f.name;
+  document.getElementById('fileSize').textContent = (f.size / 1024).toFixed(1) + ' KB';
+  document.getElementById('selectedFile').classList.remove('d-none');
+  document.getElementById('uploadBtn').disabled = false;
+}
+
+function clearFile() {
+  selectedFile = null;
+  fileInput.value = '';
+  document.getElementById('selectedFile').classList.add('d-none');
+  document.getElementById('uploadBtn').disabled = true;
+}
+
+function resetUpload() {
+  clearFile();
+  document.getElementById('resultsCard').classList.add('d-none');
+  document.getElementById('progressCard').classList.add('d-none');
+}
+
+async function uploadFile() {
+  if (!selectedFile) return;
+  const btn = document.getElementById('uploadBtn');
+  btn.disabled = true;
+  document.getElementById('progressCard').classList.remove('d-none');
+  document.getElementById('resultsCard').classList.add('d-none');
+  animateProgress();
+
+  const fd = new FormData();
+  fd.append('file', selectedFile);
+
+  try {
+    const result = await apiFetch('/upload/requirements', { method: 'POST', body: fd });
+    showResults(result);
+  } catch(e) {
+    showError(e.message);
+  } finally {
+    btn.disabled = false;
+    stopProgress();
+  }
+}
+
+let progressInterval = null;
+function animateProgress() {
+  let p = 0;
+  const bar = document.getElementById('progressBar');
+  progressInterval = setInterval(() => {
+    p = Math.min(p + Math.random() * 8, 85);
+    bar.style.width = p + '%';
+  }, 200);
+}
+function stopProgress() {
+  clearInterval(progressInterval);
+  document.getElementById('progressBar').style.width = '100%';
+  setTimeout(() => document.getElementById('progressCard').classList.add('d-none'), 500);
+}
+
+function showResults(r) {
+  document.getElementById('resultsCard').classList.remove('d-none');
+  const ok = r.status === 'completed';
+  document.getElementById('resultsTitle').innerHTML =
+    `<i class="bi bi-${ok?'check-circle text-success':'x-circle text-danger'} me-2"></i>` +
+    (ok ? `Upload Complete — Batch #${r.batch_id}` : 'Upload Failed');
+
+  const stats = [
+    { label: 'Total Rows', value: r.total_rows, color: 'primary' },
+    { label: 'Rows Loaded', value: r.rows_loaded, color: 'success' },
+    { label: 'Rows Skipped', value: r.rows_skipped, color: 'warning' },
+    { label: 'Rows Failed', value: r.rows_failed, color: 'danger' },
+  ];
+  document.getElementById('statsRow').innerHTML = stats.map(s =>
+    `<div class="col-6 col-md-3">
+      <div class="text-center p-2 rounded border border-${s.color}">
+        <div class="fw-bold fs-5 text-${s.color}">${s.value}</div>
+        <div class="small text-muted">${s.label}</div>
+      </div>
+    </div>`).join('');
+
+  if (r.transformation_summary && Object.keys(r.transformation_summary).length) {
+    const ts = r.transformation_summary;
+    document.getElementById('transformSummary').classList.remove('d-none');
+    document.getElementById('transformSummary').innerHTML = `
+      <div class="alert alert-info py-2 small">
+        <i class="bi bi-gear me-1"></i>
+        <strong>Transformation Engine:</strong>
+        ${ts.transformation_rules_applied || 0} rules applied,
+        ${ts.transformation_rules_failed || 0} failed.
+        ${ts.rgs_rows ? `RGS: ${ts.rgs_rows} rows. ` : ''}
+        ${ts.skill_rows ? `Skills: ${ts.skill_rows} entries. ` : ''}
+        ${ts.param_rows ? `Parameters: ${ts.param_rows} entries.` : ''}
+      </div>`;
+  }
+
+  if (r.errors && r.errors.length) {
+    document.getElementById('errorSection').classList.remove('d-none');
+    document.getElementById('errorCount').textContent = r.errors.length;
+    document.getElementById('errorList').innerHTML = r.errors.map(e => `<div>${e}</div>`).join('');
+  }
+
+  showToast(ok ? `Loaded ${r.rows_loaded} records successfully.` : 'Upload failed.', ok ? 'success' : 'danger');
+}
+
+function showError(msg) {
+  document.getElementById('resultsCard').classList.remove('d-none');
+  document.getElementById('resultsTitle').innerHTML = '<i class="bi bi-x-circle text-danger me-2"></i>Upload Error';
+  document.getElementById('statsRow').innerHTML = '';
+  document.getElementById('errorSection').classList.remove('d-none');
+  document.getElementById('errorCount').textContent = 1;
+  document.getElementById('errorList').innerHTML = `<div class="text-danger">${msg}</div>`;
+}
+
+function downloadTemplate() {
+  // Create a minimal CSV template
+  const headers = ['Fulfillment Status','Group Customer Name','Account Name','Domain','IOU','Sub IOU',
+    'Country','Branch','Primary Competency Proficiency Details','Competency','Experience Range',
+    'Revenue Impact','Onsite/Offshore','Delivery Manager','Requirement ID','Skill','Added Date',
+    'Service Practice','Target Fulfillment Date','Revenue At Risk','Revenue Won',
+    'Requirement Start Date','Candidate Name','Fulfillment Channel'];
+  const csv = headers.join(',') + '\n' +
+    ['Open','Acme Corp','Acme IT','Banking','IOU1','Sub1','India','Bangalore','Java Developer',
+     'Engineering','5-8 years','150000','Offshore','John Manager','REQ001','Java','2025-01-15',
+     'Technology','2025-03-01','75000','','2025-01-01','','Direct'].join(',');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'mot_nexus_template.csv';
+  a.click();
+}
+</script>
+</body>
+</html>

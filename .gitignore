@@ -1,0 +1,54 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Virtual environment (never commit – rebuilt on each machine) ──────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Database (data lives on each deployment, not in source control) ───────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Environment / secrets ─────────────────────────────────────────────────────
+.env
+# .env.example is intentionally kept – it's a safe template
+
+# ── Logs & runtime files ──────────────────────────────────────────────────────
+logs/
+*.log
+*.pid
+server.log
+
+# ── macOS ─────────────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ── Windows ───────────────────────────────────────────────────────────────────
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ── IDE / editor ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Claude Code dev tooling (not needed in repo) ─────────────────────────────
+.claude/
+
+# ── Temporary / helper scripts created during dev ────────────────────────────
+start_server.sh

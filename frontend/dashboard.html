@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Executive Dashboard – MOT Nexus</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="/css/styles.css">
+<style>
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .75rem; }
+.filter-section { font-size: .82rem; }
+.filter-section label { font-weight: 600; color: #475569; font-size: .75rem; margin-bottom: 2px; }
+.filter-section select, .filter-section input { font-size: .82rem; }
+.chart-card { background: white; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.08); padding: 1rem; }
+.chart-card h6 { font-weight: 600; color: var(--mot-navy); font-size: .88rem; margin-bottom: .75rem; }
+.tab-nav .nav-link { font-size: .82rem; padding: .4rem .9rem; }
+.alert-item { padding: .5rem .75rem; border-radius: 6px; margin-bottom: .4rem; font-size: .82rem; }
+.alert-item.danger { background: #fee2e2; color: #991b1b; }
+.alert-item.warning { background: #fef3c7; color: #92400e; }
+</style>
+</head>
+<body>
+
+<header class="mot-header">
+  <button id="sidebarToggle" class="btn d-md-none me-2" style="color:white"><i class="bi bi-list fs-5"></i></button>
+  <a href="/" class="mot-logo me-auto"><span>MOT</span> Nexus</a>
+  <div class="d-flex align-items-center gap-3">
+    <div class="position-relative">
+      <button class="nav-btn" onclick="toggleAlertsPanel()"><i class="bi bi-bell"></i></button>
+      <span id="alertBadge" class="alert-badge" style="display:none">0</span>
+    </div>
+    <a href="/" class="nav-btn"><i class="bi bi-house me-1"></i>Home</a>
+    <button class="nav-btn" onclick="exportDashboard()"><i class="bi bi-download me-1"></i>Export</button>
+    <button class="nav-btn" onclick="refreshAll()"><i class="bi bi-arrow-repeat me-1"></i>Refresh</button>
+  </div>
+</header>
+
+<nav class="mot-sidebar">
+  <div class="nav-section">Data Management</div>
+  <a href="/upload.html" class="nav-link" data-page="upload"><i class="bi bi-cloud-upload"></i>Upload Data</a>
+  <a href="/view.html" class="nav-link" data-page="view"><i class="bi bi-table"></i>View Records</a>
+  <a href="/download.html" class="nav-link" data-page="download"><i class="bi bi-download"></i>Download Data</a>
+  <a href="/delete.html"  class="nav-link" data-page="delete">  <i class="bi bi-trash"></i>Delete Data</a>
+  <div class="nav-section mt-2">Analytics</div>
+  <a href="/dashboard.html" class="nav-link active" data-page="dashboard"><i class="bi bi-speedometer2"></i>Executive Dashboard</a>
+  <div class="nav-section mt-2">System</div>
+  <a href="/api/docs" target="_blank" class="nav-link"><i class="bi bi-code-square"></i>API Documentation</a>
+</nav>
+
+<main class="mot-main">
+  <div class="mot-breadcrumb">
+    <a href="/">Home</a><span class="sep">/</span><span class="current">Executive Dashboard</span>
+  </div>
+  <div class="page-header d-flex align-items-start justify-content-between flex-wrap gap-2">
+    <div>
+      <h1><i class="bi bi-speedometer2 me-2" style="color:var(--mot-accent)"></i>MOT Nexus – Executive Analytics</h1>
+      <p>Revenue · Fulfillment · Risk · Skills · Customer Exposure</p>
+    </div>
+    <!-- Template selector -->
+    <div class="d-flex gap-2 align-items-center">
+      <span class="small text-muted">View:</span>
+      <div class="btn-group btn-group-sm">
+        <button class="btn btn-outline-primary active" id="tpl_executive" onclick="setTemplate('executive')">Executive</button>
+        <button class="btn btn-outline-primary" id="tpl_rmg" onclick="setTemplate('rmg')">RMG</button>
+        <button class="btn btn-outline-primary" id="tpl_delivery" onclick="setTemplate('delivery')">Delivery</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Filters -->
+  <div class="mot-card mb-3">
+    <div class="mot-card-header">
+      <h5><i class="bi bi-funnel me-2"></i>Global Filters</h5>
+      <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-mot" onclick="applyFilters()"><i class="bi bi-check-lg me-1"></i>Apply</button>
+        <button class="btn btn-sm btn-outline-secondary" onclick="clearFilters()"><i class="bi bi-x me-1"></i>Clear All</button>
+      </div>
+    </div>
+    <div class="mot-card-body filter-section">
+      <div class="row g-2">
+        <div class="col-6 col-md-3 col-lg-2">
+          <label>IOU</label>
+          <select class="form-select form-select-sm" id="f_iou"><option value="">All</option></select>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+          <label>Sub IOU</label>
+          <select class="form-select form-select-sm" id="f_sub_iou"><option value="">All</option></select>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+          <label>Service Practice</label>
+          <select class="form-select form-select-sm" id="f_service_practice"><option value="">All</option></select>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+          <label>Delivery Manager</label>
+          <select class="form-select form-select-sm" id="f_delivery_manager"><option value="">All</option></select>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+          <label>Customer</label>
+          <select class="form-select form-select-sm" id="f_group_customer_name"><option value="">All</option></select>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+          <label>Account</label>
+          <select class="form-select form-select-sm" id="f_account_name"><option value="">All</option></select>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+          <label>Fulfillment Status</label>
+          <select class="form-select form-select-sm" id="f_fulfillment_status"><option value="">All</option></select>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+          <label>Country</label>
+          <select class="form-select form-select-sm" id="f_country"><option value="">All</option></select>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+          <label>IT/BPS</label>
+          <select class="form-select form-select-sm" id="f_it_bps"><option value="">All</option></select>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+          <label>Age Bucket</label>
+          <select class="form-select form-select-sm" id="f_age_bucket">
+            <option value="">All</option>
+            <option>0-15</option><option>16-30</option>
+            <option>31-60</option><option>61-90</option><option>90+</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+          <label>Req Month</label>
+          <select class="form-select form-select-sm" id="f_requirement_month"><option value="">All</option></select>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+          <label>Primary Skill</label>
+          <select class="form-select form-select-sm" id="f_skill_consolidated"><option value="">All</option></select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid mb-3" id="kpiGrid">
+    <div class="kpi-tile border-primary"><div class="kpi-label">Loading…</div><div class="kpi-value">—</div></div>
+  </div>
+
+  <!-- Charts Row 1 -->
+  <div class="row g-3 mb-3" id="chartsRow1">
+    <div class="col-lg-4">
+      <div class="chart-card h-100">
+        <h6><i class="bi bi-filter me-1"></i>Revenue Funnel</h6>
+        <div id="chart_funnel" style="height:300px"></div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="chart-card h-100">
+        <h6><i class="bi bi-bar-chart me-1"></i>Revenue by Fulfillment Status</h6>
+        <div id="chart_revenue_status" style="height:300px"></div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="chart-card h-100">
+        <h6><i class="bi bi-bar-chart-steps me-1"></i>Requirement Aging Distribution</h6>
+        <div id="chart_aging" style="height:300px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row 2 -->
+  <div class="row g-3 mb-3" id="chartsRow2">
+    <div class="col-lg-6">
+      <div class="chart-card h-100">
+        <h6><i class="bi bi-list-ol me-1"></i>Top Skills in Demand</h6>
+        <div id="chart_skills" style="height:300px"></div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <!-- Dynamic chart builder -->
+      <div class="chart-card h-100">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <h6 class="mb-0"><i class="bi bi-tools me-1"></i>Chart Builder</h6>
+          <button class="btn btn-sm btn-outline-primary" onclick="saveChart()"><i class="bi bi-bookmark me-1"></i>Save</button>
+        </div>
+        <div class="d-flex gap-2 mb-2 flex-wrap">
+          <select class="form-select form-select-sm" id="cb_measure" style="max-width:160px" onchange="buildCustomChart()">
+            <option value="requirement_count">Count</option>
+            <option value="revenue_impact">Revenue Impact</option>
+            <option value="fulfillment_count">Fulfilled</option>
+            <option value="evaluation_count">Under Evaluation</option>
+          </select>
+          <span class="align-self-center text-muted small">by</span>
+          <select class="form-select form-select-sm" id="cb_dimension" style="max-width:160px" onchange="buildCustomChart()">
+            <option value="fulfillment_status">Fulfillment Status</option>
+            <option value="customer">Customer</option>
+            <option value="account">Account</option>
+            <option value="service_practice">Service Practice</option>
+            <option value="country">Country</option>
+            <option value="iou">IOU</option>
+            <option value="skill">Skill</option>
+            <option value="delivery_manager">Delivery Manager</option>
+            <option value="requirement_month">Req Month</option>
+            <option value="it_bps">IT/BPS</option>
+          </select>
+          <select class="form-select form-select-sm" id="cb_type" style="max-width:120px" onchange="buildCustomChart()">
+            <option value="bar">Bar</option>
+            <option value="line">Line</option>
+            <option value="pie">Pie</option>
+            <option value="donut">Donut</option>
+            <option value="area">Area</option>
+          </select>
+        </div>
+        <div id="chart_custom" style="height:240px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab section: Data Grid / Alerts -->
+  <div class="mot-card">
+    <div class="mot-card-header p-0 px-3 pt-2">
+      <ul class="nav nav-tabs tab-nav border-0">
+        <li class="nav-item"><button class="nav-link active" onclick="switchTab('grid', this)"><i class="bi bi-table me-1"></i>Data Grid</button></li>
+        <li class="nav-item"><button class="nav-link" onclick="switchTab('alerts', this)"><i class="bi bi-bell me-1"></i>Alerts <span id="alertTabCount" class="badge bg-danger ms-1"></span></button></li>
+      </ul>
+    </div>
+
+    <!-- Data Grid -->
+    <div id="tab_grid" class="mot-card-body p-0">
+      <div class="table-responsive">
+        <table class="table mot-table mb-0" id="dashGrid">
+          <thead>
+            <tr>
+              <th>Req ID</th><th>Status</th><th>Customer</th><th>Account</th>
+              <th>Skill</th><th>Ageing</th><th>Revenue</th><th>Month</th>
+            </tr>
+          </thead>
+          <tbody id="dashGridBody">
+            <tr><td colspan="8" class="text-center py-3 text-muted">Apply filters and click Apply to load data.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Alerts -->
+    <div id="tab_alerts" class="mot-card-body d-none" style="max-height:400px;overflow-y:auto">
+      <div id="alertsList"><div class="text-muted small text-center py-3">Loading…</div></div>
+    </div>
+  </div>
+</main>
+
+<footer class="mot-footer">
+  <span>&copy; 2025 MOT Nexus – Executive Analytics Dashboard</span>
+  <span id="footerTime"></span>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script src="/js/common.js"></script>
+<script>
+document.getElementById('footerTime').textContent = new Date().toLocaleString();
+
+const charts = {};
+let currentFilters = {};
+
+function getFilters() {
+  const ids = ['iou','sub_iou','service_practice','delivery_manager','group_customer_name',
+    'account_name','fulfillment_status','country','it_bps','age_bucket','requirement_month','skill_consolidated'];
+  const p = new URLSearchParams();
+  ids.forEach(id => {
+    const v = document.getElementById('f_'+id)?.value;
+    if (v) p.set(id, v);
+  });
+  return p;
+}
+
+function clearFilters() {
+  document.querySelectorAll('.filter-section select').forEach(s => s.value = '');
+  applyFilters();
+}
+
+async function applyFilters() {
+  currentFilters = getFilters();
+  await Promise.all([loadKPIs(), loadCharts(), loadGrid()]);
+}
+
+async function refreshAll() {
+  showToast('Refreshing dashboard…', 'info');
+  await applyFilters();
+  await loadAlerts();
+}
+
+// ── KPI Cards ───────────────────────────────────────────────────────────────
+
+const KPI_ICONS = {
+  total_revenue: 'currency-dollar', revenue_won: 'trophy', revenue_at_risk: 'exclamation-triangle',
+  fulfillment_rate: 'percent', open_requirements: 'file-earmark-text', sla_breach_pct: 'clock-history',
+};
+const KPI_COLORS = {
+  total_revenue: 'primary', revenue_won: 'success', revenue_at_risk: 'danger',
+  fulfillment_rate: 'info', open_requirements: 'warning', sla_breach_pct: 'secondary',
+};
+
+async function loadKPIs() {
+  try {
+    const kpis = await apiFetch('/dashboard/kpis?' + currentFilters);
+    const grid = document.getElementById('kpiGrid');
+    grid.innerHTML = kpis.map(k => `
+      <div class="kpi-tile border-${KPI_COLORS[k.key]||'primary'}" style="cursor:default">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="kpi-label">${k.label}</div>
+            <div class="kpi-value">${k.formatted_value}</div>
+          </div>
+          <i class="bi bi-${KPI_ICONS[k.key]||'bar-chart'} kpi-icon"></i>
+        </div>
+      </div>`).join('');
+  } catch(e) { console.error('KPI error:', e); }
+}
+
+// ── Charts ───────────────────────────────────────────────────────────────────
+
+async function loadCharts() {
+  await Promise.all([
+    loadFunnel(), loadRevenueByStatus(), loadAging(), loadTopSkills(), buildCustomChart()
+  ]);
+}
+
+function initChart(id) {
+  if (charts[id]) charts[id].dispose();
+  charts[id] = echarts.init(document.getElementById(id), null, { renderer: 'canvas' });
+  return charts[id];
+}
+
+async function loadFunnel() {
+  try {
+    const d = await apiFetch('/dashboard/charts/revenue-funnel?' + currentFilters);
+    const chart = initChart('chart_funnel');
+    const entries = Object.entries(d.data || {}).sort((a,b) => b[1]-a[1]);
+    chart.setOption({
+      tooltip: { trigger: 'item', formatter: '{b}: {c}' },
+      series: [{
+        type: 'funnel', left: '10%', width: '80%',
+        label: { show: true, position: 'inside', fontSize: 11 },
+        data: entries.map(([name, value]) => ({ name, value })),
+        color: ['#1a3c5e','#0d6efd','#0dcaf0','#22c55e','#f59e0b'],
+      }]
+    });
+  } catch {}
+}
+
+async function loadRevenueByStatus() {
+  try {
+    const d = await apiFetch('/dashboard/charts/revenue-by-status?' + currentFilters);
+    const chart = initChart('chart_revenue_status');
+    chart.setOption({
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      legend: { bottom: 0, textStyle: { fontSize: 10 } },
+      xAxis: { type: 'category', data: d.statuses || [], axisLabel: { fontSize: 10, rotate: 30 } },
+      yAxis: [
+        { type: 'value', name: 'Revenue', nameTextStyle: { fontSize: 10 },
+          axisLabel: { formatter: v => v >= 1e6 ? `$${(v/1e6).toFixed(1)}M` : v >= 1e3 ? `$${(v/1e3).toFixed(0)}K` : `$${v}`, fontSize: 10 }},
+        { type: 'value', name: 'Count', nameTextStyle: { fontSize: 10 }, axisLabel: { fontSize: 10 } }
+      ],
+      series: [
+        { name: 'Revenue', type: 'bar', data: d.revenue || [], itemStyle: { color: '#0d6efd' }, yAxisIndex: 0 },
+        { name: 'Count', type: 'line', data: d.counts || [], itemStyle: { color: '#f59e0b' }, yAxisIndex: 1,
+          symbol: 'circle', symbolSize: 6 },
+      ]
+    });
+  } catch {}
+}
+
+async function loadAging() {
+  try {
+    const d = await apiFetch('/dashboard/charts/aging-distribution?' + currentFilters);
+    const chart = initChart('chart_aging');
+    const colors = ['#22c55e','#0dcaf0','#f59e0b','#f97316','#ef4444'];
+    chart.setOption({
+      tooltip: { trigger: 'axis' },
+      xAxis: { type: 'category', data: d.buckets || [], axisLabel: { fontSize: 10 } },
+      yAxis: { type: 'value', axisLabel: { fontSize: 10 } },
+      series: [{
+        type: 'bar', data: (d.counts || []).map((v, i) => ({ value: v, itemStyle: { color: colors[i] } })),
+        label: { show: true, position: 'top', fontSize: 10 },
+      }]
+    });
+  } catch {}
+}
+
+async function loadTopSkills() {
+  try {
+    const d = await apiFetch('/dashboard/charts/top-skills?' + currentFilters);
+    const chart = initChart('chart_skills');
+    const skills = (d.skills || []).slice().reverse();
+    const counts = (d.counts || []).slice().reverse();
+    chart.setOption({
+      tooltip: { trigger: 'axis' },
+      grid: { left: '25%', right: '5%', top: '5%', bottom: '5%' },
+      xAxis: { type: 'value', axisLabel: { fontSize: 10 } },
+      yAxis: { type: 'category', data: skills, axisLabel: { fontSize: 10 } },
+      series: [{
+        type: 'bar', data: counts, barMaxWidth: 30,
+        itemStyle: { color: new echarts.graphic.LinearGradient(1,0,0,0,[{offset:0,color:'#0d6efd'},{offset:1,color:'#0dcaf0'}]) },
+        label: { show: true, position: 'right', fontSize: 10 },
+      }]
+    });
+  } catch {}
+}
+
+async function buildCustomChart() {
+  const measure   = document.getElementById('cb_measure')?.value || 'requirement_count';
+  const dimension = document.getElementById('cb_dimension')?.value || 'fulfillment_status';
+  const chartType = document.getElementById('cb_type')?.value || 'bar';
+  try {
+    const p = new URLSearchParams(currentFilters);
+    p.set('measure', measure); p.set('dimension', dimension);
+    const d = await apiFetch('/dashboard/charts/custom?' + p);
+    if (d.error) return;
+    const chart = initChart('chart_custom');
+    renderCustomChart(chart, d, chartType);
+  } catch {}
+}
+
+function renderCustomChart(chart, d, type) {
+  const labels = d.labels || [];
+  const values = d.values || [];
+  if (type === 'pie' || type === 'donut') {
+    chart.setOption({
+      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+      series: [{
+        type: 'pie', radius: type === 'donut' ? ['40%','70%'] : '70%',
+        data: labels.map((l,i) => ({ name: l, value: values[i] })),
+        label: { fontSize: 10 },
+      }]
+    });
+  } else {
+    const isArea = type === 'area';
+    chart.setOption({
+      tooltip: { trigger: 'axis' },
+      xAxis: { type: 'category', data: labels, axisLabel: { fontSize: 10, rotate: labels.length > 5 ? 30 : 0 } },
+      yAxis: { type: 'value', axisLabel: { fontSize: 10 } },
+      series: [{
+        type: isArea ? 'line' : type,
+        data: values,
+        smooth: true,
+        areaStyle: isArea ? { opacity: .3 } : undefined,
+        itemStyle: { color: '#0d6efd' },
+        label: { show: labels.length <= 10, position: 'top', fontSize: 10 },
+      }]
+    });
+  }
+}
+
+async function saveChart() {
+  const name = prompt('Chart name:');
+  if (!name) return;
+  try {
+    await apiFetch(`/dashboard/charts/saved?session_id=${getSessionId()}`, {
+      method: 'POST',
+      body: {
+        chart_name: name,
+        chart_type: document.getElementById('cb_type').value,
+        measure: document.getElementById('cb_measure').value,
+        dimension: document.getElementById('cb_dimension').value,
+      }
+    });
+    showToast('Chart saved!', 'success');
+  } catch(e) { showToast(e.message, 'danger'); }
+}
+
+// ── Data Grid ────────────────────────────────────────────────────────────────
+
+async function loadGrid() {
+  try {
+    const p = new URLSearchParams(currentFilters);
+    p.set('page_size', 100);
+    const data = await apiFetch('/requirements?' + p);
+    const tbody = document.getElementById('dashGridBody');
+    if (!data.items.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="text-center py-3 text-muted">No records match the current filters.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.items.map(r => `
+      <tr>
+        <td><code class="small">${r.requirement_id}</code></td>
+        <td>${statusBadge(r.fulfillment_status)}</td>
+        <td class="small">${r.group_customer_name || '—'}</td>
+        <td class="small">${r.account_name || '—'}</td>
+        <td class="small">${r.skill_consolidated || '—'}</td>
+        <td class="small">${r.requirement_ageing_calendar_days || '—'}</td>
+        <td class="small">${r.revenue_impact ? fmtCurrency(r.revenue_impact) : '—'}</td>
+        <td class="small">${r.requirement_month || '—'}</td>
+      </tr>`).join('');
+  } catch {}
+}
+
+// ── Alerts ───────────────────────────────────────────────────────────────────
+
+async function loadAlerts() {
+  try {
+    const alerts = await apiFetch('/dashboard/alerts');
+    const el = document.getElementById('alertsList');
+    const badge = document.getElementById('alertBadge');
+    const tabCount = document.getElementById('alertTabCount');
+    const unread = alerts.filter(a => !a.is_read).length;
+    if (badge) { badge.textContent = unread; badge.style.display = unread ? 'flex' : 'none'; }
+    if (tabCount) { tabCount.textContent = unread || ''; tabCount.style.display = unread ? 'inline' : 'none'; }
+
+    if (!alerts.length) {
+      el.innerHTML = '<div class="text-center text-muted py-3 small"><i class="bi bi-check-circle me-1 text-success"></i>No active alerts.</div>';
+      return;
+    }
+    el.innerHTML = alerts.map(a => `
+      <div class="alert-item ${a.severity}" onclick="markRead(${a.id}, this)">
+        <div class="d-flex gap-2 align-items-start">
+          <i class="bi bi-${a.severity==='danger'?'exclamation-circle':'exclamation-triangle'} mt-1 flex-shrink-0"></i>
+          <div class="flex-grow-1">
+            <span class="fw-semibold">[${a.alert_type.replace('_',' ').toUpperCase()}]</span> ${a.message}
+            <div style="font-size:.72rem;opacity:.7">${new Date(a.created_at).toLocaleString()}</div>
+          </div>
+          ${!a.is_read ? '<span class="badge bg-danger align-self-start" style="font-size:.65rem">NEW</span>' : ''}
+        </div>
+      </div>`).join('');
+  } catch {}
+}
+
+async function markRead(id, el) {
+  try {
+    await apiFetch(`/dashboard/alerts/${id}/read`, { method: 'PATCH' });
+    el.style.opacity = '.5';
+    await loadAlerts();
+  } catch {}
+}
+
+function toggleAlertsPanel() {
+  switchTab('alerts', document.querySelector('.tab-nav .nav-link:nth-child(2)'));
+  document.getElementById('tab_alerts').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+
+function switchTab(tab, btn) {
+  document.getElementById('tab_grid').classList.toggle('d-none', tab !== 'grid');
+  document.getElementById('tab_alerts').classList.toggle('d-none', tab !== 'alerts');
+  document.querySelectorAll('.tab-nav .nav-link').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (tab === 'alerts') loadAlerts();
+}
+
+// ── Templates ────────────────────────────────────────────────────────────────
+
+function setTemplate(tpl) {
+  document.querySelectorAll('[id^="tpl_"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('tpl_'+tpl)?.classList.add('active');
+  if (tpl === 'rmg') {
+    document.getElementById('cb_dimension').value = 'skill';
+    document.getElementById('cb_measure').value = 'requirement_count';
+  } else if (tpl === 'delivery') {
+    document.getElementById('cb_dimension').value = 'customer';
+    document.getElementById('cb_measure').value = 'fulfillment_count';
+  } else {
+    document.getElementById('cb_dimension').value = 'fulfillment_status';
+    document.getElementById('cb_measure').value = 'revenue_impact';
+  }
+  buildCustomChart();
+}
+
+// ── Export ────────────────────────────────────────────────────────────────────
+
+function exportDashboard() {
+  const p = new URLSearchParams(currentFilters);
+  p.set('format', 'excel');
+  window.location.href = `/api/v1/download/requirements?${p}`;
+}
+
+// ── Filter options ───────────────────────────────────────────────────────────
+
+async function loadFilterOptions() {
+  try {
+    const opts = await apiFetch('/dashboard/filter-options');
+    const map = {
+      f_iou: opts.ious, f_sub_iou: opts.sub_ious, f_service_practice: opts.service_practices,
+      f_delivery_manager: opts.delivery_managers, f_group_customer_name: opts.customers,
+      f_account_name: opts.accounts, f_fulfillment_status: opts.fulfillment_statuses,
+      f_country: opts.countries, f_it_bps: opts.it_bps_options,
+      f_requirement_month: opts.requirement_months, f_skill_consolidated: opts.skills,
+    };
+    for (const [id, vals] of Object.entries(map)) {
+      const sel = document.getElementById(id);
+      if (!sel) continue;
+      vals.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o); });
+    }
+  } catch(e) { console.error('Filter opts error:', e); }
+}
+
+// ── Resize charts on window resize ──────────────────────────────────────────
+
+window.addEventListener('resize', () => {
+  Object.values(charts).forEach(c => c?.resize());
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadFilterOptions();
+  await applyFilters();
+  await loadAlerts();
+});
+</script>
+</body>
+</html>
