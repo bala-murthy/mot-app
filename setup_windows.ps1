@@ -60,9 +60,15 @@ if (Test-Path ".venv\Scripts\python.exe") {
 
 # ── 4. Install Python dependencies ───────────────────────────────────────────
 Write-Host "[4/5] Installing dependencies (this may take 1-2 minutes)..." -ForegroundColor Yellow
-# Use --python with the full absolute path so uv always installs into OUR .venv,
-# not into any system or user-level Python environment.
-uv pip install --python "$AppDir\.venv\Scripts\python.exe" -r backend\requirements.txt
+# Use the venv's own pip executable directly – this is the only guaranteed way
+# to install into OUR .venv regardless of uv version or PATH quirks on Windows.
+$VenvPython = "$AppDir\.venv\Scripts\python.exe"
+& $VenvPython -m pip install --upgrade pip --quiet
+& $VenvPython -m pip install -r backend\requirements.txt
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "ERROR: Dependency installation failed. Check the output above." -ForegroundColor Red
+    exit 1
+}
 Write-Host "      Dependencies installed." -ForegroundColor Green
 
 # ── 5. Create folders & seed data ────────────────────────────────────────────
