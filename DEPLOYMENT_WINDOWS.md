@@ -68,9 +68,8 @@ cd C:\mot-nexus
 
 This script will:
 - Verify Python is installed
-- Install the `uv` package manager
-- Create a Python virtual environment (`.venv` folder)
-- Install all dependencies
+- Create a Python virtual environment (`.venv` folder) using the built-in `venv` module
+- Install all dependencies using `pip`
 - Create the database and load sample data
 
 Expected output (last few lines):

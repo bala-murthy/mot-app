@@ -20,7 +20,7 @@ Write-Host "====================================================" -ForegroundCol
 Write-Host ""
 
 # ── 1. Check Python ──────────────────────────────────────────────────────────
-Write-Host "[1/5] Checking Python..." -ForegroundColor Yellow
+Write-Host "[1/4] Checking Python..." -ForegroundColor Yellow
 try {
     $pyVersion = & python --version 2>&1
     Write-Host "      Found: $pyVersion" -ForegroundColor Green
@@ -32,38 +32,31 @@ try {
     exit 1
 }
 
-# ── 2. Install uv (fast package manager) ─────────────────────────────────────
-Write-Host "[2/5] Installing uv package manager..." -ForegroundColor Yellow
-if (Get-Command uv -ErrorAction SilentlyContinue) {
-    Write-Host "      uv already installed." -ForegroundColor Green
-} else {
-    try {
-        powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-        # Reload PATH so uv is available immediately
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" +
-                    [System.Environment]::GetEnvironmentVariable("Path","User")
-        Write-Host "      uv installed." -ForegroundColor Green
-    } catch {
-        Write-Host "      uv install failed, falling back to pip..." -ForegroundColor Yellow
-        python -m pip install uv --quiet
-    }
-}
+# ── 2. Create virtual environment ─────────────────────────────────────────────
+# Use the standard 'python -m venv' which always includes pip.
+# (uv venv intentionally omits pip, causing 'No module named pip' errors.)
+Write-Host "[2/4] Creating virtual environment..." -ForegroundColor Yellow
+$VenvPython = "$AppDir\.venv\Scripts\python.exe"
 
-# ── 3. Create virtual environment ─────────────────────────────────────────────
-Write-Host "[3/5] Creating virtual environment..." -ForegroundColor Yellow
-if (Test-Path ".venv\Scripts\python.exe") {
+if (Test-Path $VenvPython) {
     Write-Host "      Virtual environment already exists." -ForegroundColor Green
 } else {
-    uv venv .venv
+    & python -m venv "$AppDir\.venv"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "ERROR: Failed to create virtual environment." -ForegroundColor Red
+        exit 1
+    }
     Write-Host "      Virtual environment created." -ForegroundColor Green
 }
 
-# ── 4. Install Python dependencies ───────────────────────────────────────────
-Write-Host "[4/5] Installing dependencies (this may take 1-2 minutes)..." -ForegroundColor Yellow
-# Use the venv's own pip executable directly – this is the only guaranteed way
-# to install into OUR .venv regardless of uv version or PATH quirks on Windows.
-$VenvPython = "$AppDir\.venv\Scripts\python.exe"
+# ── 3. Install Python dependencies ───────────────────────────────────────────
+# Run pip from INSIDE the venv – guarantees packages land in the right place.
+Write-Host "[3/4] Installing dependencies (this may take 2-3 minutes)..." -ForegroundColor Yellow
 & $VenvPython -m pip install --upgrade pip --quiet
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "ERROR: pip upgrade failed." -ForegroundColor Red
+    exit 1
+}
 & $VenvPython -m pip install -r backend\requirements.txt
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Dependency installation failed. Check the output above." -ForegroundColor Red
@@ -71,17 +64,16 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "      Dependencies installed." -ForegroundColor Green
 
-# ── 5. Create folders & seed data ────────────────────────────────────────────
-Write-Host "[5/5] Initialising database..." -ForegroundColor Yellow
+# ── 4. Create folders & seed data ────────────────────────────────────────────
+Write-Host "[4/4] Initialising database..." -ForegroundColor Yellow
 New-Item -ItemType Directory -Force -Path "$AppDir\logs" | Out-Null
 
 if (Test-Path "mot_nexus.db") {
     Write-Host "      Database already exists - skipping seed." -ForegroundColor Green
 } else {
     $env:PYTHONPATH = $AppDir
-    # Use the full absolute path – PowerShell's & operator misreads a leading
-    # ".venv\" (without .\) as a module name rather than a file path.
-    & "$AppDir\.venv\Scripts\python.exe" backend\seed_data.py
+    # Full absolute path avoids PowerShell misreading '.venv\' as a module name.
+    & $VenvPython backend\seed_data.py
     if ($LASTEXITCODE -ne 0) {
         Write-Host "ERROR: Database seeding failed. Check the output above." -ForegroundColor Red
         exit 1
