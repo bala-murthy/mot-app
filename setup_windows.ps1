@@ -60,7 +60,9 @@ if (Test-Path ".venv\Scripts\python.exe") {
 
 # ── 4. Install Python dependencies ───────────────────────────────────────────
 Write-Host "[4/5] Installing dependencies (this may take 1-2 minutes)..." -ForegroundColor Yellow
-uv pip install -r backend\requirements.txt
+# Use --python with the full absolute path so uv always installs into OUR .venv,
+# not into any system or user-level Python environment.
+uv pip install --python "$AppDir\.venv\Scripts\python.exe" -r backend\requirements.txt
 Write-Host "      Dependencies installed." -ForegroundColor Green
 
 # ── 5. Create folders & seed data ────────────────────────────────────────────
@@ -71,7 +73,13 @@ if (Test-Path "mot_nexus.db") {
     Write-Host "      Database already exists - skipping seed." -ForegroundColor Green
 } else {
     $env:PYTHONPATH = $AppDir
-    & .venv\Scripts\python.exe backend\seed_data.py
+    # Use the full absolute path – PowerShell's & operator misreads a leading
+    # ".venv\" (without .\) as a module name rather than a file path.
+    & "$AppDir\.venv\Scripts\python.exe" backend\seed_data.py
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "ERROR: Database seeding failed. Check the output above." -ForegroundColor Red
+        exit 1
+    }
     Write-Host "      Database seeded with sample data." -ForegroundColor Green
 }
 
